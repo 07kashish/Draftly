@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Draftly</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body class="draftly-popup">
+    <main>
+      <h1>Draftly</h1>
+      <p class="draftly-popup-copy">Gmail AI reply assistant</p>
+
+      <section class="draftly-status-panel">
+        <span class="draftly-status-label">Status</span>
+        <strong id="popupStatus">Ready</strong>
+      </section>
+
+      <button id="loginButton" class="draftly-popup-button" type="button">
+        Sign in with Google
+      </button>
+
+      <button id="profileButton" class="draftly-popup-button draftly-popup-button-secondary" type="button">
+        Check Gmail Profile
+      </button>
+
+      <button id="testBackendButton" class="draftly-popup-button draftly-popup-button-secondary" type="button">
+        Test Backend
+      </button>
+
+      <p id="popupMessage" class="draftly-popup-message" aria-live="polite"></p>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

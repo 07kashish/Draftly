@@ -1,0 +1,23 @@
+# Phase 6 Test Checklist
+
+- [ ] Backend is running on `http://localhost:8080`.
+- [ ] `GET http://localhost:8080/api/health` returns `UP`.
+- [ ] Draftly extension is reloaded in `chrome://extensions`.
+- [ ] Old Gmail tabs are closed.
+- [ ] Gmail is opened fresh.
+- [ ] No duplicate Draftly buttons appear.
+- [ ] Existing email thread is opened.
+- [ ] Gmail reply editor is opened.
+- [ ] Draftly AI Reply generates and inserts a reply.
+- [ ] Generated reply is edited slightly.
+- [ ] Save as Gmail Draft works.
+- [ ] Draft appears in Gmail Drafts.
+- [ ] Draft subject starts with `Re:` and does not duplicate `Re:`.
+- [ ] Draft is addressed to the original sender.
+- [ ] Draft body contains the latest edited text.
+- [ ] If Gmail accepts the thread ID, draft appears in the same Gmail conversation.
+- [ ] If thread ID is unavailable or rejected, Draftly shows `Saved as Gmail Draft. Thread linking unavailable.`
+- [ ] OAuth errors show `Please sign in with Google.`
+- [ ] Gmail permission errors show `Could not save Gmail draft. Please check Gmail permissions.`
+- [ ] Backend errors show `Backend unavailable. Please start Draftly backend.`
+- [ ] Console logs include `[Draftly Threading]` metadata without OAuth tokens.

@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: draftly
+  config:
+    import:
+      - optional:file:../.env[.properties]
+      - optional:file:.env[.properties]
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/draftly}
+    username: ${DB_USERNAME:draftly}
+    password: ${DB_PASSWORD:draftly}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 8080
+
+openrouter:
+  api-key: ${OPENROUTER_API_KEY:}
+  model: ${OPENROUTER_MODEL:openrouter/free}
+  base-url: https://openrouter.ai/api/v1/chat/completions
+
+# Local PostgreSQL quick setup:
+# docker run --name draftly-postgres -e POSTGRES_DB=draftly -e POSTGRES_USER=draftly -e POSTGRES_PASSWORD=draftly -p 5432:5432 -d postgres:16
+# You can override these values with environment-specific config later.
