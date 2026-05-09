@@ -68,6 +68,30 @@ Install:
 - An OpenRouter API key, optional but recommended
 - A Google Cloud OAuth client for the Chrome extension
 
+## Docker Setup
+
+Draftly is Dockerized using Docker Compose.
+
+The Docker setup runs:
+
+- Spring Boot backend
+- PostgreSQL database
+
+The Chrome extension must be loaded manually in Chrome because browser extensions run inside the browser.
+
+### Prerequisites
+
+- Docker Desktop
+- OpenRouter API key
+
+### Environment Setup
+
+Create a `.env` file in the project root:
+
+```env
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_MODEL=openrouter/free
+
 ## Environment Setup
 
 Create a root `.env` file from the example:
