@@ -1,80 +1,151 @@
 # Draftly - Gmail AI Reply Agent
 
-Draftly is a Gmail-based AI reply assistant that analyzes incoming emails, detects category, tone, urgency, and action items, generates context-aware replies, learns from approved drafts, and helps users manage replies through a Chrome extension and Spring Boot backend.
+Draftly is a Gmail-based AI writing assistant. It adds a small toolbar inside Gmail so you can generate replies to existing email threads, compose new emails from prompts, save drafts into Gmail, and approve finished drafts so Draftly learns your writing style over time.
 
-## Problem Statement
+The project has two parts:
 
-Writing email replies takes time because users need to understand intent, decide what action is required, choose the right tone, and avoid making accidental commitments. This becomes repetitive in Gmail when handling follow-ups, meeting requests, complaints, and decision requests.
+- `backend/`: Spring Boot API for email analysis, draft generation, tone learning, and draft workflows.
+- `extension/`: Chrome Manifest V3 extension that runs inside Gmail.
 
-## Solution
+## What Draftly Does
 
-Draftly adds an AI reply workflow inside Gmail. The Chrome extension extracts email context, sends it to the backend, receives a suggested reply, inserts it into the Gmail reply editor, and lets the user edit, save, approve, reject, or regenerate drafts. Approved drafts update a lightweight tone profile so future replies better match the user's writing style.
+Draftly helps with two common Gmail workflows.
 
-## Key Features
+**Reply Mode**
 
-- Gmail Chrome extension button inside compose/reply boxes
-- Email category, tone, urgency, and action-item detection
-- Context-aware reply strategy generation
-- OpenRouter LLM integration with fallback draft generation
-- Draft view, update, approve, reject, and regenerate APIs
-- User tone learning from approved and edited drafts
-- Gmail draft saving with best-effort thread linking
-- AI Compose Mode for writing full new emails from prompts
-- Swagger/OpenAPI documentation
-- Privacy-aware storage of style signals instead of full private email history
+Open an email thread, click Reply, then click `Draftly AI Reply`. Draftly reads the visible Gmail context, sends it to the backend, generates a reply, and inserts it into the Gmail editor.
+
+**Compose Mode**
+
+Open a Gmail compose box, click `Compose Email`, type a prompt like `Write an email asking for a deposit deadline extension`, and Draftly generates a full email with a subject and body.
+
+Draftly can also:
+
+- Detect email category, tone, urgency, and action items.
+- Generate a reply strategy before writing the draft.
+- Use OpenRouter when an API key is configured.
+- Fall back to rule-based drafts when the LLM is unavailable.
+- Regenerate, approve, reject, and update drafts.
+- Learn tone preferences from approved/edited drafts.
+- Save the latest editor content as a Gmail draft.
+- Use Gmail display names for greetings when Gmail exposes them.
 
 ## Tech Stack
 
-- Java 21
-- Spring Boot
+- Java 17
+- Spring Boot 3.3
 - Spring Data JPA / Hibernate
-- PostgreSQL or H2 dev profile
-- OpenRouter LLM integration with fallback mode
+- PostgreSQL for persistent local data
+- H2 for quick local demos/tests
+- OpenRouter LLM API with fallback mode
 - Chrome Extension Manifest V3
-- Gmail API
+- Gmail API `gmail.compose` scope
 - Swagger/OpenAPI
 
-## Architecture Overview
+## How It Works
 
-Gmail user opens email
--> Draftly Chrome extension extracts email context
--> Extension sends email data to Spring Boot backend
--> Backend detects category, tone, urgency, and action items
--> Backend generates a reply strategy
--> LLM or fallback generator creates a reply
--> Reply is returned to the extension
--> Extension inserts draft into Gmail
+```text
+Gmail thread or compose box
+-> Draftly Chrome extension extracts context
+-> Extension calls Spring Boot backend
+-> Backend analyzes intent, tone, urgency, and action items
+-> Backend generates a strategy
+-> OpenRouter or fallback generator creates a draft
+-> Extension inserts the draft into Gmail
 -> User edits, regenerates, approves, rejects, or saves as Gmail draft
--> Approved drafts update user tone profile
--> Future drafts use learned tone profile
+-> Approved drafts update the user's tone profile
+-> Future drafts use the learned profile
+```
 
-Main backend modules:
+## Prerequisites
 
-- Controllers expose health, email analysis, draft, and user profile APIs.
-- Services detect category/tone/urgency/action items, generate strategy, generate drafts, and learn tone profile signals.
-- Repositories persist users, emails, drafts, and tone profiles.
-- DTOs preserve stable public API response fields.
+Install:
 
-Main extension modules:
+- Java 17+
+- Maven
+- Google Chrome
+- PostgreSQL, unless you use the H2 local profile
+- An OpenRouter API key, optional but recommended
+- A Google Cloud OAuth client for the Chrome extension
 
-- `contentScript.js` injects Gmail buttons, extracts Gmail context, inserts replies, and saves drafts.
-- `background.js` handles OAuth, Gmail API calls, and backend requests.
-- `popup.js` provides simple sign-in status controls.
+## Docker Setup
 
-## Backend Setup
+Draftly is Dockerized using Docker Compose.
 
-For local testing with H2:
+The Docker setup runs:
 
-```bash
+- Spring Boot backend
+- PostgreSQL database
+
+The Chrome extension must be loaded manually in Chrome because browser extensions run inside the browser.
+
+### Prerequisites
+
+- Docker Desktop
+- OpenRouter API key
+
+### Environment Setup
+
+Create a `.env` file in the project root:
+
+```env
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_MODEL=openrouter/free
+
+## Environment Setup
+
+Create a root `.env` file from the example:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Fill in values:
+
+```env
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_MODEL=openrouter/free
+DATABASE_URL=jdbc:postgresql://localhost:5432/draftly
+DB_USERNAME=draftly
+DB_PASSWORD=draftly
+GOOGLE_CLIENT_ID=your_google_client_id_here
+```
+
+The backend imports both `../.env` and `backend/.env`, so running from `backend/` can still read the root `.env`.
+
+Never commit `.env`. It is ignored by `.gitignore`.
+
+## Run Backend
+
+### Option 1: PostgreSQL
+
+Start PostgreSQL and create a database/user matching your `.env`.
+
+Quick Docker example:
+
+```powershell
+docker run --name draftly-postgres -e POSTGRES_DB=draftly -e POSTGRES_USER=draftly -e POSTGRES_PASSWORD=draftly -p 5432:5432 -d postgres:16
+```
+
+Run backend:
+
+```powershell
+cd backend
+mvn spring-boot:run
+```
+
+### Option 2: H2 Local Demo
+
+Use this when PostgreSQL is not running:
+
+```powershell
 cd backend
 mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
-For PostgreSQL/default profile, start PostgreSQL and make sure the values in `backend/src/main/resources/application.yml` or local environment variables point to your database:
+H2 data is temporary and resets when the backend stops.
 
-```text
-jdbc:postgresql://localhost:5432/draftly
-```
+## Check Backend
 
 Health check:
 
@@ -88,30 +159,143 @@ Swagger:
 http://localhost:8080/swagger-ui/index.html
 ```
 
-## Chrome Extension Setup
+Run tests:
 
-1. Open `chrome://extensions`.
-2. Enable Developer Mode.
-3. Click Load unpacked.
-4. Select the `extension` folder.
-5. Reload the extension after code changes.
-6. Close old Gmail tabs and open Gmail fresh after extension reloads.
+```powershell
+cd backend
+mvn clean test
+```
+
+## Load Chrome Extension
+
+1. Open Chrome.
+2. Go to `chrome://extensions`.
+3. Enable `Developer mode`.
+4. Click `Load unpacked`.
+5. Select the `extension` folder.
+6. Pin the Draftly extension if you want quick access.
+
+After changing extension files:
+
+1. Click `Reload` on the Draftly extension.
+2. Close all old Gmail tabs.
+3. Open Gmail fresh.
+
+Old Gmail tabs can keep an old extension context and cause `Extension context invalidated`.
 
 ## Google OAuth Setup
 
-The extension uses the Gmail compose scope:
+Draftly uses this Gmail scope:
 
 ```text
 https://www.googleapis.com/auth/gmail.compose
 ```
 
-Configure a Chrome Extension OAuth client in Google Cloud, add the extension ID, and add your Gmail account as a test user if the consent screen is in testing mode. Do not commit client secrets or OAuth tokens.
+In Google Cloud:
 
-## Database Setup
+1. Create/configure an OAuth consent screen.
+2. Add your Gmail account as a test user if the app is in testing mode.
+3. Create a Chrome Extension OAuth client.
+4. Add your Chrome extension ID.
+5. Put the OAuth client ID in `extension/manifest.json`.
 
-The default profile expects PostgreSQL. The `local` profile uses H2 for quick demos and resets data when the backend stops. PostgreSQL is recommended for persistent final testing.
+Do not commit OAuth client secrets or tokens. This extension should only need the OAuth client ID, not a client secret.
+
+## Use Draftly In Gmail
+
+### Reply Mode
+
+1. Start the backend.
+2. Reload the extension.
+3. Close old Gmail tabs and open Gmail fresh.
+4. Open an existing email thread.
+5. Click Gmail `Reply`.
+6. Click `Draftly AI Reply`.
+7. Review the inserted draft.
+8. Edit the draft if needed.
+9. Use one of the Draftly actions:
+   - `Regenerate`: ask backend for another version.
+   - `Approve`: mark the final draft as approved and update tone learning.
+   - `Reject`: mark the draft as rejected.
+   - `Save as Gmail Draft`: save the latest editor text into Gmail drafts.
+
+### Compose Mode
+
+1. Open Gmail `Compose`.
+2. Click `Compose Email` in the Draftly toolbar.
+3. Type a prompt, for example:
+
+```text
+Write an email to my university asking for an extension in the deposit deadline because the amount is high and I need more time to arrange it.
+```
+
+4. Choose tone.
+5. Add optional context if helpful.
+6. Click `Generate Email`.
+7. Draftly inserts the generated email body and fills the subject when Gmail exposes the subject field.
+
+Compose Mode calls:
+
+```text
+POST /api/emails/compose
+```
+
+Reply Mode calls:
+
+```text
+POST /api/emails/analyze
+```
+
+The two modes are separate.
+
+## Tone Learning
+
+Draftly learns only from approved drafts.
+
+When you edit a Gmail draft and approve it:
+
+1. The extension sends the latest edited text to the backend.
+2. The backend marks the draft as approved.
+3. Draftly updates the user tone profile.
+
+The profile stores style signals:
+
+- Preferred tone
+- Preferred greeting
+- Preferred sign-off
+- Average reply length
+- Approved draft count
+- Common useful phrases
+
+Draftly does not need to store full private email history for tone learning.
+
+View profile:
+
+```text
+GET /api/users/{email}/tone-profile
+```
+
+Reset profile:
+
+```text
+DELETE /api/users/{email}/tone-profile
+```
+
+## Gmail Draft Saving
+
+When you click `Save as Gmail Draft`, Draftly:
+
+1. Reads the current Gmail editor content.
+2. Uses the latest edited text, not stale generated text.
+3. Builds a plain-text MIME email.
+4. Calls Gmail `drafts.create`.
+5. Attempts best-effort thread linking when Gmail exposes a usable thread ID.
+
+If thread linking is unavailable, Draftly still saves a normal Gmail draft and shows a fallback message.
 
 ## API Endpoints
+
+Core endpoints:
 
 - `GET /api/health`
 - `POST /api/emails/analyze`
@@ -125,7 +309,7 @@ The default profile expects PostgreSQL. The `local` profile uses H2 for quick de
 - `GET /api/users/{email}/tone-profile`
 - `DELETE /api/users/{email}/tone-profile`
 
-Analyze responses keep these stable fields:
+Reply analysis responses keep these stable fields:
 
 - `emailId`
 - `draftId`
@@ -135,73 +319,115 @@ Analyze responses keep these stable fields:
 - `strategy`
 - `draft`
 
-See [backend/API_TEST_EXAMPLES.md](backend/API_TEST_EXAMPLES.md) for cURL examples.
-
-## User Tone Learning
-
-Draftly learns from drafts the user approves. If a draft is edited with `PATCH /api/drafts/{draftId}` before approval, the edited content is used for learning.
-
-The profile stores style signals such as preferred greeting, sign-off, average reply length, preferred tone, approved draft count, and common reusable phrases. It does not store unnecessary full private email history for tone learning.
-
-## Gmail Draft Saving
-
-The extension reads the latest Gmail editor content, builds a plain-text reply MIME message, and creates a Gmail draft using the Gmail API. It tries to include a thread identifier when Gmail exposes one. If thread linking is unavailable or Gmail rejects the candidate thread ID, Draftly saves a normal draft and shows a clear fallback message.
-
-## AI Compose Mode
-
-Draftly supports two Gmail writing modes:
-
-1. Reply Mode: open an existing Gmail thread, click Reply, and use Draftly AI Reply to generate a response from the email context.
-2. Compose Mode: click Compose Email in the Draftly toolbar, enter a natural-language prompt, and generate a full new email with a subject and body.
-
-Compose Mode uses `POST /api/emails/compose` and stays separate from the reply analyzer, so prompt-based emails do not call the reply-mode `/api/emails/analyze` endpoint.
+Full API examples are in [backend/API_TEST_EXAMPLES.md](backend/API_TEST_EXAMPLES.md).
 
 ## Demo Flow
 
-1. Start backend.
-2. Open Swagger health endpoint.
-3. Reload extension.
-4. Open Gmail fresh.
-5. Open an email thread and click Reply.
-6. Click Draftly AI Reply.
-7. Edit or regenerate the draft.
-8. Save as Gmail Draft.
-9. Approve a final draft to update tone profile.
-10. View tone profile endpoint.
+1. Start backend:
 
-## Testing
-
-```bash
+```powershell
 cd backend
-mvn clean test
 mvn spring-boot:run
 ```
 
-Use the local profile when PostgreSQL is not running:
+2. Open health endpoint:
 
-```bash
+```text
+http://localhost:8080/api/health
+```
+
+3. Open Swagger:
+
+```text
+http://localhost:8080/swagger-ui/index.html
+```
+
+4. Reload Draftly extension.
+5. Close old Gmail tabs.
+6. Open Gmail fresh.
+7. Open an email thread.
+8. Click `Reply`.
+9. Click `Draftly AI Reply`.
+10. Edit the reply.
+11. Click `Save as Gmail Draft`.
+12. Click `Approve`.
+13. Check tone profile endpoint.
+14. Open Gmail Compose and test `Compose Email`.
+
+## Troubleshooting
+
+**Backend unavailable**
+
+Start backend and check:
+
+```text
+http://localhost:8080/api/health
+```
+
+**Port 8080 already in use**
+
+Another backend instance is already running. Stop it, or run this in PowerShell to find it:
+
+```powershell
+netstat -ano | findstr :8080
+```
+
+**Database unavailable**
+
+Start PostgreSQL, check `.env`, or use:
+
+```powershell
 mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
-Additional testing guidance is in [TESTING.md](TESTING.md).
+**OpenRouter key missing**
+
+If logs show `OPENROUTER_API_KEY is missing or blank`, make sure root `.env` has a real key and restart the backend.
+
+**Extension context invalidated**
+
+Reload extension, close Gmail, then open Gmail fresh.
+
+**Google sign-in failed**
+
+Check OAuth client ID, extension ID, consent screen test users, and `identity` permission.
+
+**Draftly button not appearing**
+
+Refresh Gmail, make sure the extension is loaded, and confirm host permissions include `https://mail.google.com/*`.
+
+**Gmail draft save failed**
+
+Confirm Google sign-in works and the OAuth scope includes `gmail.compose`.
+
+**Thread linking unavailable**
+
+Gmail does not always expose a true Gmail API thread ID in the DOM. Draftly saves the draft anyway, but may not link it to the original thread.
+
+## Security Notes
+
+- Do not commit `.env`.
+- Do not commit real API keys, OAuth tokens, client secrets, database passwords, or credential JSON files.
+- Do not log OAuth tokens.
+- Avoid logging full private email bodies in production.
+- Store only needed style signals for tone learning.
 
 ## Known Limitations
 
-- Gmail DOM extraction can vary depending on Gmail layout.
-- True Gmail API `threadId` may not always be available from the DOM.
-- Draft quality depends on email context and LLM availability.
-- OAuth app in testing mode requires configured test users.
-- Local backend must be running for the extension demo.
-- H2 is for development; PostgreSQL is recommended for final testing.
+- Gmail DOM structure can change.
+- True Gmail thread IDs are not always available from the page.
+- Draft quality depends on prompt/email context and LLM availability.
+- OAuth apps in testing mode require test users.
+- Backend must run locally for the extension demo.
+- H2 is useful for demos but PostgreSQL is better for persistent testing.
 
 ## Future Improvements
 
-- Production backend deployment
-- Better Gmail thread metadata through Gmail API message access
+- Production deployment
+- Gmail metadata through Gmail API message reads
+- Better privacy controls for stored email data
 - More advanced tone learning
-- Outlook or other email-provider support
+- Outlook support
 - Calendar availability integration
 - Team/admin dashboard
-- Privacy controls for stored email data
-- Privacy-safe RAG over user-approved replies
-- Better analytics for reply categories
+- Analytics for email categories and reply workflows

@@ -321,7 +321,8 @@ async function handleDraftlyReplyClick(editor, toolbar) {
     const extractedSubject = extractSubject();
     const extractedThreadText = extractThreadText();
     const extractedBody = extractLatestEmailBody();
-    const senderDetails = extractSenderDetails(extractedBody || extractedThreadText || "");
+    const latestMessageNode = findLatestMessageNode();
+    const senderDetails = extractSenderDetails(latestMessageNode);
     const extractedSender = senderDetails.sender;
     const gmailContext = extractGmailContext({
       currentUserEmail: gmailProfile.emailAddress,
@@ -668,8 +669,15 @@ function extractSubject() {
   return firstUsefulText(subjectNodes);
 }
 
-function extractSenderDetails(emailBodyText = "") {
+function extractSenderDetails(messageNode = null) {
   const senderNodes = [
+    ...(messageNode
+      ? [
+          messageNode.querySelector(".gD[email]"),
+          messageNode.querySelector("span[email]"),
+          messageNode.querySelector(".go")
+        ]
+      : []),
     document.querySelector(".gD[email]"),
     document.querySelector("span[email]"),
     document.querySelector(".go")
@@ -686,16 +694,15 @@ function extractSenderDetails(emailBodyText = "") {
     const displayName = visibleName || titleName;
 
     if (displayName || email) {
-      return buildSenderDetails(displayName, email, emailBodyText);
+      return buildSenderDetails(displayName, email);
     }
   }
 
-  return buildSenderDetails("", "", emailBodyText);
+  return buildSenderDetails("", "");
 }
 
-function buildSenderDetails(displayName, email, emailBodyText) {
-  const signatureName = displayName ? "" : extractSignatureName(emailBodyText);
-  const finalDisplayName = displayName || signatureName || "";
+function buildSenderDetails(displayName, email) {
+  const finalDisplayName = displayName || "";
   const finalEmail = cleanEmailAddress(email);
   const sender = finalDisplayName && finalEmail
     ? `${finalDisplayName} <${finalEmail}>`
@@ -774,25 +781,6 @@ function splitMergedLastName(name) {
     }
   }
   return lower;
-}
-
-function extractSignatureName(emailBodyText) {
-  const lines = String(emailBodyText || "")
-    .split(/\r?\n/)
-    .map((line) => cleanText(line))
-    .filter(Boolean);
-
-  const signOffPattern = /^(best regards|regards|thank you|thanks|sincerely|warm regards),?$/i;
-  for (let index = lines.length - 2; index >= 0; index -= 1) {
-    if (signOffPattern.test(lines[index])) {
-      const candidate = lines[index + 1] || "";
-      if (/^[A-Za-z][A-Za-z\s.'-]{1,60}$/.test(candidate) && !candidate.includes("@")) {
-        return candidate;
-      }
-    }
-  }
-
-  return "";
 }
 
 function extractComposeRecipient() {

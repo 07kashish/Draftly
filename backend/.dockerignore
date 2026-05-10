@@ -1,0 +1,14 @@
+target/
+.env
+.env.properties
+*.env
+*.env.properties
+application-secret.yml
+client_secret*.json
+credentials*.json
+token*.json
+*.pem
+*.key
+.idea/
+.vscode/
+.DS_Store

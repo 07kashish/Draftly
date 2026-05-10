@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: draftly-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: draftly
+      POSTGRES_USER: draftly_user
+      POSTGRES_PASSWORD: draftly_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - draftly-postgres-data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: draftly-backend
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres
+
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/draftly
+      SPRING_DATASOURCE_USERNAME: draftly_user
+      SPRING_DATASOURCE_PASSWORD: draftly_password
+
+      DB_URL: jdbc:postgresql://postgres:5432/draftly
+      DATABASE_URL: jdbc:postgresql://postgres:5432/draftly
+      DB_USERNAME: draftly_user
+      DB_PASSWORD: draftly_password
+
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openrouter/free}
+
+volumes:
+  draftly-postgres-data:
